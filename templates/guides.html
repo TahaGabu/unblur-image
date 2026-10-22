@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include "_head.html" %}
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">Unblur</a>
+    <a class="btn btn-small" href="/#studio">Unblur a photo</a>
+  </header>
+  <main class="sheet">
+    <p class="eyebrow">Guides</p>
+    <h1>Unblur image, upscale, and remove blur</h1>
+    <ul class="guide-list">
+      {% for guide in guides %}
+      <li><a href="/guides/{{ guide.slug }}">{{ guide.title }}</a><p>{{ guide.description }}</p></li>
+      {% endfor %}
+    </ul>
+  </main>
+  {% include "_footer.html" %}
+</body>
+</html>

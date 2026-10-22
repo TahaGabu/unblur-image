@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include "_head.html" %}
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">Unblur</a>
+    <a class="btn btn-small" href="/#studio">Unblur a photo</a>
+  </header>
+  <article class="sheet">
+    <p class="eyebrow">Unblur</p>
+    <h1>{{ page.title }}</h1>
+    {% for heading, lines in page.sections %}
+    <section>
+      <h2>{{ heading }}</h2>
+      {% for line in lines %}<p>{{ line }}</p>{% endfor %}
+    </section>
+    {% endfor %}
+  </article>
+  {% include "_footer.html" %}
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include "_head.html" %}
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">Unblur</a>
+    <a class="btn btn-small" href="#studio">Unblur a photo</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">AI image upscaler</p>
+      <h1>Unblur image</h1>
+      <p class="lede">Make a blurry photo sharp. The first {{ free_tokens }} photos are free, so you can see the result. After that, ₹{{ price }} adds {{ pack_tokens }} more.</p>
+      <ul class="facts">
+        <li><b>{{ free_tokens }}</b><span>free upscales</span></li>
+        <li><b>₹{{ price }}</b><span>for {{ pack_tokens }} more</span></li>
+        <li><b>2×</b><span>width and height</span></li>
+      </ul>
+    </section>
+
+    <section class="studio" id="studio">
+      <form id="form">
+        <label class="drop" id="drop">
+          <input id="file" type="file" accept="image/jpeg,image/png,image/webp">
+          <span id="drop-label">Choose a JPG, PNG, or WebP</span>
+        </label>
+        <button class="btn" id="go" type="submit">Unblur this photo</button>
+        <p class="note" id="tokens">Checking free upscales…</p>
+        <p class="note warn" id="say" hidden></p>
+      </form>
+      <div class="compare" id="compare" hidden>
+        <figure>
+          <img id="before" alt="Original photo before unblur">
+          <figcaption>Before</figcaption>
+        </figure>
+        <figure>
+          <img id="after" alt="Unblurred image, about twice as large">
+          <figcaption>After</figcaption>
+        </figure>
+      </div>
+      <p id="ready" hidden><a class="btn" id="download" href="" download>Download the sharp photo</a></p>
+    </section>
+
+    <section class="steps">
+      <h2>From a soft photo to a larger file</h2>
+      <ol>
+        <li><h3>Upload</h3><p>Use the photo you already have. Nothing is cropped.</p></li>
+        <li><h3>Unblur</h3><p>The clarity model rebuilds detail and returns a file about twice as wide.</p></li>
+        <li><h3>Download</h3><p>Compare it with the original on this page, then save it. No watermark.</p></li>
+      </ol>
+    </section>
+
+    <section class="faq">
+      <h2>Good to know</h2>
+      {% for item in faqs %}
+      <details>
+        <summary>{{ item.q }}</summary>
+        <p>{{ item.a }}{% if item.q == "What if the file fails?" %} See the <a href="/refunds">refund policy</a>.{% endif %}</p>
+      </details>
+      {% endfor %}
+    </section>
+  </main>
+
+  {% include "_footer.html" %}
+  <script id="cfg" type="application/json">{{ config_json | safe }}</script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

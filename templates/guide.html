@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include "_head.html" %}
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">Unblur</a>
+    <a class="btn btn-small" href="/#studio">Unblur a photo</a>
+  </header>
+  <article class="sheet">
+    <p class="eyebrow"><a href="/guides">Guides</a></p>
+    <h1>{{ guide.h1 }}</h1>
+    <p class="lede">{{ guide.lede }}</p>
+    {% for heading, lines in guide.sections %}
+    <section>
+      <h2>{{ heading }}</h2>
+      {% for line in lines %}<p>{{ line }}</p>{% endfor %}
+    </section>
+    {% endfor %}
+    <p><a class="btn" href="/#studio">Unblur your photo</a></p>
+  </article>
+  {% include "_footer.html" %}
+</body>
+</html>

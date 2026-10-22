@@ -1,0 +1,22 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ seo.title }}</title>
+<meta name="description" content="{{ seo.description }}">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#f4f1e8">
+<link rel="canonical" href="{{ seo.url }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<meta property="og:locale" content="en_IN">
+<meta property="og:site_name" content="Unblur">
+<meta property="og:type" content="{{ seo.type }}">
+<meta property="og:title" content="{{ seo.title }}">
+<meta property="og:description" content="{{ seo.description }}">
+<meta property="og:url" content="{{ seo.url }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ seo.title }}">
+<meta name="twitter:description" content="{{ seo.description }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680&family=Outfit:wght@360;500;650&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+<script type="application/ld+json">{{ seo.schema | safe }}</script>
