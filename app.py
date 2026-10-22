@@ -10,7 +10,7 @@ from pathlib import Path
 import razorpay
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -33,7 +33,25 @@ for folder in (DATA, INBOX, OUT):
 
 app = FastAPI(title="Unblur")
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
-app.mount("/media", StaticFiles(directory=OUT), name="media")
+
+
+def _media_type(path: Path) -> str:
+    header = path.read_bytes()[:16]
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if header.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if len(header) >= 12 and header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        return "image/webp"
+    return "application/octet-stream"
+
+
+@app.get("/media/{name}")
+def media_file(name: str):
+    path = (OUT / name).resolve()
+    if path.parent != OUT.resolve() or not path.is_file():
+        raise HTTPException(404, "Photo not found.")
+    return FileResponse(path, media_type=_media_type(path))
 templates = Jinja2Templates(directory=str(ROOT / "templates"))
 lock = threading.Lock()
 
@@ -86,6 +104,7 @@ def page_context() -> dict:
         "price": price,
         "free_tokens": free,
         "pack_tokens": pack,
+        "scale": scale_factor(),
         "payments_ready": payments_ready(),
         "test_mode": key_id.startswith("rzp_test_"),
         "key_id": key_id,
@@ -255,7 +274,7 @@ def run_upscale(job_id: str) -> None:
     dest = OUT / f"{job_id}.jpg"
     try:
         update_order(job_id, status="working", message="Making the photo sharp…")
-        upscale(source, dest, scale_factor())
+        saved = upscale(source, dest, scale_factor())
         original = ""
         if source.exists():
             public_original = OUT / f"{job_id}-original{source.suffix.lower()}"
@@ -265,7 +284,7 @@ def run_upscale(job_id: str) -> None:
             job_id,
             status="ready",
             message="Your photo is sharp. Download it now.",
-            image_url=f"/media/{dest.name}",
+            image_url=f"/media/{saved.name}",
             original_url=original,
             finished_at=datetime.now().isoformat(timespec="seconds"),
         )

@@ -14,8 +14,17 @@ def contact() -> dict:
     }
 
 
+def _scale() -> int:
+    try:
+        value = int(os.environ.get("SCALE_FACTOR", "4"))
+    except ValueError:
+        return 4
+    return value if value in (2, 4) else 2
+
+
 def pages(price: int, pack: int) -> dict[str, dict]:
     c = contact()
+    scale = _scale()
     reach = c["email"] or "the email on the Contact page"
     return {
         "contact": {
@@ -45,7 +54,7 @@ def pages(price: int, pack: int) -> dict[str, dict]:
                     [
                         f"Each device can unblur {pack} photos for free, so you can see the result before you pay.",
                         f"One payment of ₹{price} adds {pack} more upscales. One token makes one photo.",
-                        "The result is about twice the width and height of the photo you upload. It follows the picture you give us. It does not invent a new scene.",
+                        f"The result is about {scale}× the width and height of the photo you upload. It follows the picture you give us. It does not invent a new scene.",
                     ],
                 ),
                 (

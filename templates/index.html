@@ -5,59 +5,151 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 </head>
 <body>
+  {% include "_atmosphere.html" %}
   <header class="nav">
-    <a class="brand" href="/">Unblur</a>
-    <a class="btn btn-small" href="#studio">Unblur a photo</a>
+    <a class="brand" href="/"><span class="mark"></span>Unblur</a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="/guides">Guides</a>
+      <a href="#studio">Studio</a>
+    </nav>
+    <a class="btn btn-small magnetic" href="#studio"><span>Unblur a photo</span></a>
   </header>
 
   <main>
     <section class="hero">
-      <p class="eyebrow">AI image upscaler</p>
-      <h1>Unblur image</h1>
-      <p class="lede">Make a blurry photo sharp. The first {{ free_tokens }} photos are free, so you can see the result. After that, ₹{{ price }} adds {{ pack_tokens }} more.</p>
-      <ul class="facts">
-        <li><b>{{ free_tokens }}</b><span>free upscales</span></li>
-        <li><b>₹{{ price }}</b><span>for {{ pack_tokens }} more</span></li>
-        <li><b>2×</b><span>width and height</span></li>
-      </ul>
+      <div class="hero-copy">
+        <p class="eyebrow" data-reveal><span class="pulse-dot"></span>AI image upscaler</p>
+        <h1 class="split">Unblur image.<br>Make it <em class="shine">sharp.</em></h1>
+        <p class="lede" data-reveal style="--d:.45s">Make a blurry photo sharp. The first {{ free_tokens }} photos are free, so you can see the result. After that, ₹{{ price }} adds {{ pack_tokens }} more.</p>
+        <div class="hero-cta" data-reveal style="--d:.6s">
+          <a class="btn btn-big magnetic" href="#studio"><span>Unblur a photo</span><i class="arrow">→</i></a>
+          <a class="btn-ghost" href="#how">See how it works</a>
+        </div>
+        <ul class="facts" data-reveal style="--d:.75s">
+          <li><b data-count="{{ free_tokens }}">0</b><span>free upscales</span></li>
+          <li><b>₹<span data-count="{{ price }}">0</span></b><span>for {{ pack_tokens }} more</span></li>
+          <li><b><span data-count="{{ scale }}">0</span>×</b><span>width and height</span></li>
+        </ul>
+      </div>
+
+      <div class="hero-stage" aria-hidden="true">
+        <div class="shot shot-back">
+          <div class="scene scene-blur"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="shot shot-main">
+          <div class="scene scene-blur"><i></i><i></i><i></i><i></i></div>
+          <div class="scene scene-sharp"><i></i><i></i><i></i><i></i></div>
+          <div class="shot-scan"></div>
+          <div class="shot-ui"><span class="rec"><span></span>SHARP</span><span>{{ scale }}×</span></div>
+        </div>
+        <div class="float-chip chip-a"><span class="tick">✓</span>{{ free_tokens }} free photos</div>
+        <div class="float-chip chip-b"><span class="spinner"></span>Making it sharp</div>
+        <div class="float-chip chip-c">{{ scale }}× · no watermark</div>
+      </div>
     </section>
 
-    <section class="studio" id="studio">
+    <section class="marquee" aria-label="Photos people unblur">
+      <div class="marquee-row">
+        <div class="marquee-track">
+          {% for label in [
+            "Portraits", "Product photos", "Old scans", "Screenshots", "Marketplace listings", "Prints",
+            "Portraits", "Product photos", "Old scans", "Screenshots", "Marketplace listings", "Prints",
+          ] %}
+          <span class="pill">{{ label }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="marquee-row reverse">
+        <div class="marquee-track">
+          {% for label in [
+            "Soft focus", "Small files", "Phone photos", "Wedding stills", "Menu photos", "ID crops",
+            "Soft focus", "Small files", "Phone photos", "Wedding stills", "Menu photos", "ID crops",
+          ] %}
+          <span class="pill">{{ label }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section id="how" class="how">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">How it works</p>
+        <h2>From a soft photo to a larger file</h2>
+      </div>
+      <ol class="steps">
+        <li class="step tilt" data-reveal style="--d:.05s">
+          <span class="step-n">01</span>
+          <div class="step-icon icon-upload" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h3>Upload</h3>
+          <p>Use the photo you already have. Nothing is cropped.</p>
+        </li>
+        <li class="step tilt" data-reveal style="--d:.15s">
+          <span class="step-n">02</span>
+          <div class="step-icon icon-sharp" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+          <h3>Unblur</h3>
+          <p>The clarity model rebuilds detail and returns a file about {{ scale }}× as wide.</p>
+        </li>
+        <li class="step tilt" data-reveal style="--d:.25s">
+          <span class="step-n">03</span>
+          <div class="step-icon icon-save" aria-hidden="true"></div>
+          <h3>Download</h3>
+          <p>Compare it with the original on this page, then save it. No watermark.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="studio" id="studio" data-reveal>
+      <div class="section-head">
+        <p class="eyebrow">The studio</p>
+        <h2>Unblur this photo</h2>
+      </div>
       <form id="form">
         <label class="drop" id="drop">
           <input id="file" type="file" accept="image/jpeg,image/png,image/webp">
           <span id="drop-label">Choose a JPG, PNG, or WebP</span>
         </label>
         <button class="btn" id="go" type="submit">Unblur this photo</button>
-        <p class="note" id="tokens">Checking free upscales…</p>
+        <p class="note" id="tokens">{{ free_tokens }} free upscales. ₹{{ price }} for {{ pack_tokens }} more.</p>
         <p class="note warn" id="say" hidden></p>
       </form>
       <div class="compare" id="compare" hidden>
         <figure>
-          <img id="before" alt="Original photo before unblur">
+          <div class="result-frame">
+            <img id="before" alt="Original photo before unblur">
+          </div>
           <figcaption>Before</figcaption>
         </figure>
         <figure>
-          <img id="after" alt="Unblurred image, about twice as large">
+          <div class="result-frame" id="after-frame">
+            <img id="after-ghost" alt="" hidden>
+            <img id="after" alt="Sharp photo" hidden>
+            <div class="wait" id="wait">
+              <div class="progress" id="progress" hidden>
+                <div class="progress-top">
+                  <span id="progress-label">Making the photo sharp</span>
+                  <b id="progress-pct">0%</b>
+                </div>
+                <div class="progress-track" id="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="progress-bar"></span>
+                </div>
+              </div>
+              <p class="wait-copy" id="wait-copy">The sharp photo will show here.</p>
+            </div>
+          </div>
           <figcaption>After</figcaption>
         </figure>
       </div>
       <p id="ready" hidden><a class="btn" id="download" href="" download>Download the sharp photo</a></p>
     </section>
 
-    <section class="steps">
-      <h2>From a soft photo to a larger file</h2>
-      <ol>
-        <li><h3>Upload</h3><p>Use the photo you already have. Nothing is cropped.</p></li>
-        <li><h3>Unblur</h3><p>The clarity model rebuilds detail and returns a file about twice as wide.</p></li>
-        <li><h3>Download</h3><p>Compare it with the original on this page, then save it. No watermark.</p></li>
-      </ol>
-    </section>
-
     <section class="faq">
-      <h2>Good to know</h2>
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Good to know</p>
+        <h2>Before you upload</h2>
+      </div>
       {% for item in faqs %}
-      <details>
+      <details data-reveal style="--d:{{ loop.index0 * 0.04 }}s">
         <summary>{{ item.q }}</summary>
         <p>{{ item.a }}{% if item.q == "What if the file fails?" %} See the <a href="/refunds">refund policy</a>.{% endif %}</p>
       </details>
@@ -67,6 +159,6 @@
 
   {% include "_footer.html" %}
   <script id="cfg" type="application/json">{{ config_json | safe }}</script>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=3"></script>
 </body>
 </html>

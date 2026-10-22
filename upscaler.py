@@ -26,7 +26,7 @@ def _client() -> replicate.Client:
     return replicate.Client(
         api_token=os.environ.get("REPLICATE_API_TOKEN", "").strip(),
         transport=httpx.HTTPTransport(proxy=_proxy()),
-        timeout=httpx.Timeout(30.0, read=180.0, write=180.0, connect=30.0, pool=30.0),
+        timeout=httpx.Timeout(30.0, read=120.0, write=180.0, connect=30.0, pool=30.0),
     )
 
 
@@ -40,10 +40,20 @@ def _url(output) -> str:
     raise RuntimeError("The upscaler returned nothing.")
 
 
-def _download(url: str, dest: Path) -> None:
+def _kind(header: bytes) -> str:
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if header.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if len(header) >= 12 and header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        return "webp"
+    return ""
+
+
+def _download(url: str, dest: Path) -> Path:
     proxy = _proxy()
     proxies = {"http": proxy, "https": proxy} if proxy else None
-    with requests.get(url, timeout=180, stream=True, proxies=proxies) as response:
+    with requests.get(url, timeout=300, stream=True, proxies=proxies) as response:
         response.raise_for_status()
         with dest.open("wb") as handle:
             for chunk in response.iter_content(chunk_size=256 * 1024):
@@ -51,6 +61,12 @@ def _download(url: str, dest: Path) -> None:
                     handle.write(chunk)
     if dest.stat().st_size < 1000:
         raise RuntimeError("The download was empty.")
+    kind = _kind(dest.read_bytes()[:16])
+    if kind and dest.suffix.lower() != f".{kind}":
+        renamed = dest.with_suffix(f".{kind}")
+        dest.replace(renamed)
+        return renamed
+    return dest
 
 
 def upscale(source: Path, dest: Path, scale: int = 2) -> Path:
@@ -78,8 +94,8 @@ def upscale(source: Path, dest: Path, scale: int = 2) -> Path:
                 "num_inference_steps": 18,
                 "downscaling_resolution": 768,
             },
+            wait=False,
         )
     finally:
         handle.close()
-    _download(_url(output), dest)
-    return dest
+    return _download(_url(output), dest)

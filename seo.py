@@ -19,13 +19,22 @@ def url(path: str = "/") -> str:
     return SITE if path == "/" else SITE + path
 
 
+def output_scale() -> int:
+    try:
+        value = int(os.environ.get("SCALE_FACTOR", "4"))
+    except ValueError:
+        return 4
+    return value if value in (2, 4) else 2
+
+
 def faqs(price: int, free: int, pack: int) -> list[dict]:
+    scale = output_scale()
     return [
         {
             "q": "How do I unblur an image?",
             "a": (
                 "Open this page, choose a JPG, PNG, or WebP photo, and press Unblur. "
-                "The result is about twice as wide and twice as tall, with the blur reduced."
+                f"The result is about {scale}× as wide and {scale}× as tall, with the blur reduced."
             ),
         },
         {
@@ -44,7 +53,7 @@ def faqs(price: int, free: int, pack: int) -> list[dict]:
         },
         {
             "q": "What size do I get back?",
-            "a": "About 2× the width and 2× the height of the file you upload. A 1000×1000 photo comes back near 2000×2000.",
+            "a": f"About {scale}× the width and {scale}× the height of the file you upload. A 1000×1000 photo comes back near {1000 * scale}×{1000 * scale}.",
         },
         {
             "q": "Do I need an account?",
@@ -61,6 +70,7 @@ def faqs(price: int, free: int, pack: int) -> list[dict]:
 
 
 def guides(price: int, free: int, pack: int) -> list[dict]:
+    scale = output_scale()
     return [
         {
             "slug": "unblur-image",
@@ -80,7 +90,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
                     "What you get",
                     [
                         f"The first {free} photos on this device are free. ₹{price} then adds {pack} more.",
-                        "Each result is about twice the width and height, without a watermark.",
+                        f"Each result is about {scale}× the width and height, without a watermark.",
                     ],
                 ),
             ],
@@ -88,7 +98,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
         {
             "slug": "ai-image-upscaler",
             "title": "AI image upscaler",
-            "description": f"AI image upscaler that doubles a photo. {free} free upscales, then ₹{price} for {pack}.",
+            "description": f"AI image upscaler that enlarges a photo by {scale}×. {free} free upscales, then ₹{price} for {pack}.",
             "h1": "AI image upscaler",
             "lede": "An upscaler makes a small photo larger without simply stretching the pixels.",
             "sections": [
@@ -102,7 +112,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
                 (
                     "How this one works",
                     [
-                        f"Unblur runs a clarity model and returns a 2× file. {free} tries are free. ₹{price} buys {pack} more.",
+                        f"Unblur runs a clarity model and returns a {scale}× file. {free} tries are free. ₹{price} buys {pack} more.",
                     ],
                 ),
             ],
@@ -126,14 +136,14 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
         {
             "slug": "upscale-image",
             "title": "Upscale image",
-            "description": f"Upscale an image to about twice the size. {free} free, then ₹{price} for {pack} photos.",
-            "h1": "Upscale image to twice the size",
-            "lede": "Doubling a photo is the useful step for printing, listings, and slides. Larger jumps invent more detail than the file contains.",
+            "description": f"Upscale an image to {scale}× the size. {free} free, then ₹{price} for {pack} photos.",
+            "h1": f"Upscale image to {scale}× the size",
+            "lede": f"A {scale}× photo is the largest size this upscaler runs. That is the useful step for printing, listings, and slides.",
             "sections": [
                 (
-                    "2×, not a guess",
+                    f"{scale}×, not a guess",
                     [
-                        "Every upscale on this page is about 2×. That keeps faces and products close to the photo you uploaded.",
+                        f"Every upscale on this page is {scale}× the width and height. That is the highest size this model is set to run.",
                         f"You can upscale {free} photos free. After that, ₹{price} is {pack} more photos, not a subscription.",
                     ],
                 ),
@@ -199,10 +209,11 @@ def _offer(price: int) -> dict:
 
 
 def home_seo(price: int, free: int, pack: int) -> dict:
+    scale = output_scale()
     title = "Unblur Image — AI Image Upscaler"
     description = (
         f"Unblur image online with an AI image upscaler. "
-        f"{free} photos free, then ₹{price} for {pack} more. About 2× larger, no account."
+        f"{free} photos free, then ₹{price} for {pack} more. About {scale}× larger, no account."
     )
     faq_node = {
         "@type": "FAQPage",
