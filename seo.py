@@ -10,6 +10,10 @@ import json
 import os
 
 SITE = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+
+def is_free() -> bool:
+    return os.environ.get("FREE_MODE", "1").strip().lower() not in {"0", "false", "no"}
 PUBLISHED = "2026-10-22"
 
 
@@ -40,8 +44,12 @@ def faqs(price: int, free: int, pack: int) -> list[dict]:
         {
             "q": "Is the image upscaler free?",
             "a": (
-                f"The first {free} photos on a device are free, so you can see the quality before you pay. "
-                f"After that, ₹{price} adds {pack} more upscales."
+                "Yes. Unblur image is free right now. Upload a JPG, PNG, or WebP, then download the sharp photo. No account."
+                if is_free()
+                else (
+                    f"The first {free} photos on a device are free, so you can see the quality before you pay. "
+                    f"After that, ₹{price} adds {pack} more upscales."
+                )
             ),
         },
         {
@@ -75,7 +83,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
         {
             "slug": "unblur-image",
             "title": "Unblur image",
-            "description": f"Unblur a photo online. {free} free tries, then ₹{price} for {pack} more. No account.",
+            "description": "Unblur image free, online. AI image upscaler with no account and no watermark." if is_free() else f"Unblur a photo online. {free} free tries, then ₹{price} for {pack} more. No account.",
             "h1": "Unblur image online",
             "lede": "A soft photo can be made readable again when some detail is still in the file. Unblur does that in the browser.",
             "sections": [
@@ -89,7 +97,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
                 (
                     "What you get",
                     [
-                        f"The first {free} photos on this device are free. ₹{price} then adds {pack} more.",
+                        "Unblur image is free right now. There is no account and no watermark." if is_free() else f"The first {free} photos on this device are free. ₹{price} then adds {pack} more.",
                         f"Each result is about {scale}× the width and height, without a watermark.",
                     ],
                 ),
@@ -98,7 +106,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
         {
             "slug": "ai-image-upscaler",
             "title": "AI image upscaler",
-            "description": f"AI image upscaler that enlarges a photo by {scale}×. {free} free upscales, then ₹{price} for {pack}.",
+            "description": f"Free AI image upscaler. Enlarge a photo by {scale}× with no account." if is_free() else f"AI image upscaler that enlarges a photo by {scale}×. {free} free upscales, then ₹{price} for {pack}.",
             "h1": "AI image upscaler",
             "lede": "An upscaler makes a small photo larger without simply stretching the pixels.",
             "sections": [
@@ -112,7 +120,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
                 (
                     "How this one works",
                     [
-                        f"Unblur runs a clarity model and returns a {scale}× file. {free} tries are free. ₹{price} buys {pack} more.",
+                        f"Unblur is a free AI image upscaler and returns a {scale}× file." if is_free() else f"Unblur runs a clarity model and returns a {scale}× file. {free} tries are free. ₹{price} buys {pack} more.",
                     ],
                 ),
             ],
@@ -120,7 +128,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
         {
             "slug": "blur-remover",
             "title": "Blur remover",
-            "description": "Remove light blur from a photo. Free tries, then a small pack in rupees. Download on this page.",
+            "description": "Free blur remover. Unblur a photo online and download it on this page." if is_free() else "Remove light blur from a photo. Free tries, then a small pack in rupees. Download on this page.",
             "h1": "Blur remover for photos",
             "lede": "Blur from a shaky hand or a small file is different from a photo that never had detail. This tool is for the first kind.",
             "sections": [
@@ -128,7 +136,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
                     "Try it on one photo",
                     [
                         "Pick the picture, wait a few minutes, and compare it with the original on the same page.",
-                        "If the eyes, text, or product edge look better, download it. If they do not, you have not paid.",
+                        "If the eyes, text, or product edge look better, download it. The tool is free right now." if is_free() else "If the eyes, text, or product edge look better, download it. If they do not, you have not paid.",
                     ],
                 ),
             ],
@@ -136,7 +144,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
         {
             "slug": "upscale-image",
             "title": "Upscale image",
-            "description": f"Upscale an image to {scale}× the size. {free} free, then ₹{price} for {pack} photos.",
+            "description": f"Upscale image free to {scale}× the width and height. No account." if is_free() else f"Upscale an image to {scale}× the size. {free} free, then ₹{price} for {pack} photos.",
             "h1": f"Upscale image to {scale}× the size",
             "lede": f"A {scale}× photo is the largest size this upscaler runs. That is the useful step for printing, listings, and slides.",
             "sections": [
@@ -144,7 +152,7 @@ def guides(price: int, free: int, pack: int) -> list[dict]:
                     f"{scale}×, not a guess",
                     [
                         f"Every upscale on this page is {scale}× the width and height. That is the highest size this model is set to run.",
-                        f"You can upscale {free} photos free. After that, ₹{price} is {pack} more photos, not a subscription.",
+                        "You can upscale a photo for free right now. There is no subscription." if is_free() else f"You can upscale {free} photos free. After that, ₹{price} is {pack} more photos, not a subscription.",
                     ],
                 ),
             ],
@@ -210,11 +218,20 @@ def _offer(price: int) -> dict:
 
 def home_seo(price: int, free: int, pack: int) -> dict:
     scale = output_scale()
-    title = "Unblur Image — AI Image Upscaler"
-    description = (
-        f"Unblur image online with an AI image upscaler. "
-        f"{free} photos free, then ₹{price} for {pack} more. About {scale}× larger, no account."
-    )
+    if is_free():
+        title = "Unblur Image Free — AI Image Upscaler"
+        description = (
+            f"Unblur image free with an AI image upscaler. "
+            f"Remove blur and upscale a photo about {scale}×. No account and no watermark."
+        )
+        offer = _offer(0)
+    else:
+        title = "Unblur Image — AI Image Upscaler"
+        description = (
+            f"Unblur image online with an AI image upscaler. "
+            f"{free} photos free, then ₹{price} for {pack} more. About {scale}× larger, no account."
+        )
+        offer = _offer(price)
     faq_node = {
         "@type": "FAQPage",
         "@id": url("/") + "#faq",
@@ -225,18 +242,20 @@ def home_seo(price: int, free: int, pack: int) -> dict:
     }
     product = {
         "@type": "Product",
-        "name": f"{pack} AI image upscales",
+        "name": "Free AI image upscaler" if is_free() else f"{pack} AI image upscales",
         "description": description,
         "brand": {"@type": "Brand", "name": "Unblur"},
         "image": url("/static/favicon.svg"),
-        "offers": _offer(price),
+        "offers": offer,
     }
     app_node = {
         "@type": "WebApplication",
-        "name": "Unblur",
+        "name": "Unblur Image",
         "applicationCategory": "PhotographyApplication",
         "operatingSystem": "Web",
-        "offers": _offer(price),
+        "browserRequirements": "Requires a modern web browser",
+        "isAccessibleForFree": is_free(),
+        "offers": offer,
         "url": url("/"),
         "description": description,
     }

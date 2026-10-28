@@ -42,6 +42,11 @@ const offer = () => `₹${cfg.price} for ${cfg.pack} more`;
 
 const paintTokens = () => {
   if (!tokens) return;
+  if (cfg.freeMode) {
+    tokens.textContent = "Free. No account and no watermark.";
+    if (go && !polling) go.textContent = "Unblur this photo";
+    return;
+  }
   const free = cfg.free ?? 3;
   if (tokensLeft >= free) {
     tokens.textContent = `${free} free upscales. ${offer()}.`;
@@ -262,7 +267,7 @@ form?.addEventListener("submit", async (event) => {
     return;
   }
   go.disabled = true;
-  if (tokensLeft > 0) startProgress();
+  if (cfg.freeMode || tokensLeft > 0) startProgress();
   else note("Your free tries are used. Opening payment…");
   try {
     const body = new FormData();

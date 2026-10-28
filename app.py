@@ -63,8 +63,12 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
+def is_free() -> bool:
+    return os.environ.get("FREE_MODE", "1").strip().lower() not in {"0", "false", "no"}
+
+
 def price_rupees() -> int:
-    return max(1, _int_env("PRICE_RUPEES", 20))
+    return 0 if is_free() else max(1, _int_env("PRICE_RUPEES", 20))
 
 
 def free_tokens() -> int:
@@ -117,7 +121,8 @@ def page_context() -> dict:
                 "price": price,
                 "free": free,
                 "pack": pack,
-                "paymentsReady": payments_ready(),
+                "freeMode": is_free(),
+                "paymentsReady": payments_ready() and not is_free(),
                 "keyId": key_id,
                 "renderReady": render_ready(),
             }
@@ -178,7 +183,8 @@ def tokens_left(visitor_id: str) -> int:
 
 
 def _ip_cap() -> int:
-    return max(1, _int_env("FREE_IP_LIMIT", free_tokens() or 3))
+    default = 40 if is_free() else (free_tokens() or 3)
+    return max(1, _int_env("FREE_IP_LIMIT", default))
 
 
 def spend_token(visitor_id: str, ip: str) -> tuple[str, str]:
@@ -186,10 +192,12 @@ def spend_token(visitor_id: str, ip: str) -> tuple[str, str]:
     with lock:
         data = load_tokens()
         row = _visitor_row(data, visitor_id)
-        if row["free_used"] < free_tokens():
+        if is_free() or row["free_used"] < free_tokens():
             today = datetime.now().date().isoformat()
             ip_row = data["ips"].get(ip) or {}
             if int(ip_row.get(today) or 0) >= _ip_cap():
+                if is_free():
+                    return "", "This connection has used today's free photos. Come back tomorrow."
                 return "", "Free upscales are paused for today on this connection. You can still pay ₹%s for %s more." % (
                     price_rupees(),
                     pack_tokens(),

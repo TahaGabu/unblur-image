@@ -21,15 +21,15 @@
       <div class="hero-copy">
         <p class="eyebrow" data-reveal><span class="pulse-dot"></span>AI image upscaler</p>
         <h1 class="split">Unblur image.<br>Make it <em class="shine">sharp.</em></h1>
-        <p class="lede" data-reveal style="--d:.45s">Make a blurry photo sharp. The first {{ free_tokens }} photos are free, so you can see the result. After that, ₹{{ price }} adds {{ pack_tokens }} more.</p>
+        <p class="lede" data-reveal style="--d:.45s">Unblur image free. This AI image upscaler removes blur and makes the photo about {{ scale }}× wider and taller. No account and no watermark.</p>
         <div class="hero-cta" data-reveal style="--d:.6s">
           <a class="btn btn-big magnetic" href="#studio"><span>Unblur a photo</span><i class="arrow">→</i></a>
           <a class="btn-ghost" href="#how">See how it works</a>
         </div>
         <ul class="facts" data-reveal style="--d:.75s">
-          <li><b data-count="{{ free_tokens }}">0</b><span>free upscales</span></li>
-          <li><b>₹<span data-count="{{ price }}">0</span></b><span>for {{ pack_tokens }} more</span></li>
-          <li><b><span data-count="{{ scale }}">0</span>×</b><span>width and height</span></li>
+          <li><b class="fact-num">Free</b><span>unblur image</span></li>
+          <li><b class="fact-num">{{ scale }}×</b><span>width and height</span></li>
+          <li><b class="fact-num">0</b><span>account needed</span></li>
         </ul>
       </div>
 
@@ -43,7 +43,7 @@
           <div class="shot-scan"></div>
           <div class="shot-ui"><span class="rec"><span></span>SHARP</span><span>{{ scale }}×</span></div>
         </div>
-        <div class="float-chip chip-a"><span class="tick">✓</span>{{ free_tokens }} free photos</div>
+        <div class="float-chip chip-a"><span class="tick">✓</span>Free unblur image</div>
         <div class="float-chip chip-b"><span class="spinner"></span>Making it sharp</div>
         <div class="float-chip chip-c">{{ scale }}× · no watermark</div>
       </div>
@@ -110,7 +110,7 @@
           <span id="drop-label">Choose a JPG, PNG, or WebP</span>
         </label>
         <button class="btn" id="go" type="submit">Unblur this photo</button>
-        <p class="note" id="tokens">{{ free_tokens }} free upscales. ₹{{ price }} for {{ pack_tokens }} more.</p>
+        <p class="note" id="tokens">Free AI image upscaler. No account.</p>
         <p class="note warn" id="say" hidden></p>
       </form>
       <div class="compare" id="compare" hidden>
@@ -159,6 +159,6 @@
 
   {% include "_footer.html" %}
   <script id="cfg" type="application/json">{{ config_json | safe }}</script>
-  <script src="/static/js/app.js?v=3"></script>
+  <script src="/static/js/app.js?v=4"></script>
 </body>
 </html>
