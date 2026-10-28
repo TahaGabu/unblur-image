@@ -2,7 +2,7 @@
 
 Unblur image online. The page is an AI image upscaler: three tries are free, then ₹20 adds three more.
 
-The model is the Clarity upscaler (`philz1337x/clarity-upscaler`), the same one already used most on MultipleWords.
+The model is the Clarity upscaler (`philz1337x/clarity-upscaler`).
 
 ## Run
 

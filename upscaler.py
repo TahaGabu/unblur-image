@@ -1,4 +1,4 @@
-"""Clarity upscaler. Same model and settings the MultipleWords tool uses."""
+"""Clarity upscaler."""
 
 from __future__ import annotations
 
