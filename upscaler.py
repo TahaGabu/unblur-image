@@ -1,4 +1,4 @@
-"""Image upscaler."""
+"""Clarity upscaler."""
 
 from __future__ import annotations
 
@@ -9,11 +9,10 @@ import httpx
 import replicate
 import requests
 
-def _model() -> str:
-    model = os.environ.get("IMAGE_MODEL", "").strip()
-    if not model:
-        raise RuntimeError("Add IMAGE_MODEL before an upscale can run.")
-    return model
+MODEL = (
+    os.environ.get("IMAGE_MODEL", "").strip()
+    or "philz1337x/clarity-upscaler:b8a46b09384dc1ac996596bc14058e2b7604971128ee7de709a40d4bbf982d2c"
+)
 
 
 def _proxy() -> str | None:
@@ -79,12 +78,16 @@ def upscale(source: Path, dest: Path, scale: int = 2) -> Path:
     handle = source.open("rb")
     try:
         output = _client().run(
-            _model(),
+            MODEL,
             input={
                 "image": handle,
-                "prompt": os.environ.get("IMAGE_PROMPT", "masterpiece, best quality, highres"),
+                "prompt": os.environ.get(
+                    "IMAGE_PROMPT",
+                    "masterpiece, best quality, highres, <lora:more_details:0.5> <lora:SDXLrender_v2.0:1>",
+                ),
                 "dynamic": 6,
-                "sd_model": os.environ.get("IMAGE_SD_MODEL", ""),
+                "sd_model": os.environ.get("IMAGE_SD_MODEL", "").strip()
+                or "juggernaut_reborn.safetensors [338b85bc4f]",
                 "scheduler": "DPM++ 3M SDE Karras",
                 "creativity": 0.35,
                 "lora_links": "",
@@ -94,7 +97,10 @@ def upscale(source: Path, dest: Path, scale: int = 2) -> Path:
                 "tiling_width": 112,
                 "tiling_height": 144,
                 "custom_sd_model": "",
-                "negative_prompt": os.environ.get("IMAGE_NEGATIVE_PROMPT", "low quality, worst quality"),
+                "negative_prompt": os.environ.get(
+                    "IMAGE_NEGATIVE_PROMPT",
+                    "(worst quality, low quality, normal quality:2) JuggernautNegative-neg",
+                ),
                 "num_inference_steps": 18,
                 "downscaling_resolution": 768,
             },

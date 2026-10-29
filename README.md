@@ -2,8 +2,6 @@
 
 Unblur image online. The page is an AI image upscaler: three tries are free, then ₹20 adds three more.
 
-Set `IMAGE_MODEL` in `.env` before an upscale can run.
-
 ## Run
 
 ```bash
