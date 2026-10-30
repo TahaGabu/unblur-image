@@ -562,3 +562,18 @@ async def policy_page(request: Request, slug: str):
         "policy.html",
         {"request": request, "page": page, "seo": policy_seo(slug, page)},
     )
+
+
+
+@app.get("/google95531eb7c622b53b.html")
+async def google_verification():
+    verification_file = ROOT / "google95531eb7c622b53b.html"
+
+    if not verification_file.is_file():
+        raise HTTPException(404, "Verification file not found")
+
+    return FileResponse(
+        verification_file,
+        media_type="text/html"
+    )
+
