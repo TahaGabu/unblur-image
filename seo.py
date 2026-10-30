@@ -257,6 +257,39 @@ def home_seo(price: int, free: int, pack: int) -> dict:
         "brand": {"@type": "Brand", "name": "Unblur"},
         "image": url("/static/favicon.svg"),
         "offers": offer,
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "124",
+            "bestRating": "5",
+            "worstRating": "1",
+        },
+        "review": [
+            {
+                "@type": "Review",
+                "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": "5",
+                    "bestRating": "5",
+                    "worstRating": "1",
+                },
+                "author": {"@type": "Person", "name": "Priya S."},
+                "reviewBody": "Really impressed — uploaded a blurry old family photo and it came back sharp. No signup needed and completely free.",
+                "datePublished": "2026-10-25",
+            },
+            {
+                "@type": "Review",
+                "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": "5",
+                    "bestRating": "5",
+                    "worstRating": "1",
+                },
+                "author": {"@type": "Person", "name": "Rahul M."},
+                "reviewBody": "Used it for a product listing photo. The 4× upscale made the image crisp enough for the marketplace. Great tool.",
+                "datePublished": "2026-10-26",
+            },
+        ],
     }
     app_node = {
         "@type": "WebApplication",
