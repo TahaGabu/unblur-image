@@ -123,6 +123,8 @@ def _file(start_response, root: Path, relative: str):
         kind = "image/png"
     elif path.suffix == ".webp":
         kind = "image/webp"
+    elif path.suffix == ".html":
+        kind = "text/html; charset=utf-8"
     return _send(start_response, "200 OK", path.read_bytes(), kind)
 
 
@@ -143,6 +145,8 @@ def application(environ, start_response):
         return _send(start_response, "200 OK", body, "application/xml")
     if method == "GET" and path == "/robots.txt":
         return _send(start_response, "200 OK", robots().encode("utf-8"), "text/plain; charset=utf-8")
+    if method == "GET" and path == "/google95531eb7c622b53b.html":
+        return _file(start_response, ROOT, "google95531eb7c622b53b.html")
     if method == "GET" and path == "/guides":
         price, free, pack = price_rupees(), free_tokens(), pack_tokens()
         return _html(

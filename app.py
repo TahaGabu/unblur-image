@@ -557,6 +557,14 @@ async def verify_payment(request: Request):
     return payload
 
 
+@app.get("/google95531eb7c622b53b.html")
+async def google_verification():
+    verification_file = ROOT / "google95531eb7c622b53b.html"
+    if not verification_file.is_file():
+        raise HTTPException(404, "Verification file not found")
+    return FileResponse(verification_file, media_type="text/html")
+
+
 @app.get("/{slug}", response_class=HTMLResponse)
 async def policy_page(request: Request, slug: str):
     page = pages(price_rupees(), pack_tokens()).get(slug)
@@ -565,19 +573,5 @@ async def policy_page(request: Request, slug: str):
     return templates.TemplateResponse(
         "policy.html",
         {"request": request, "page": page, "seo": policy_seo(slug, page)},
-    )
-
-
-
-@app.get("/google95531eb7c622b53b.html")
-async def google_verification():
-    verification_file = ROOT / "google95531eb7c622b53b.html"
-
-    if not verification_file.is_file():
-        raise HTTPException(404, "Verification file not found")
-
-    return FileResponse(
-        verification_file,
-        media_type="text/html"
     )
 
