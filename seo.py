@@ -14,6 +14,8 @@ SITE = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
 
 def is_free() -> bool:
     return os.environ.get("FREE_MODE", "1").strip().lower() not in {"0", "false", "no"}
+
+
 PUBLISHED = "2026-10-22"
 
 
@@ -65,13 +67,21 @@ def faqs(price: int, free: int, pack: int) -> list[dict]:
         },
         {
             "q": "Do I need an account?",
-            "a": "No. The free tries and the ₹20 pack stay on this device. There is no signup.",
+            "a": (
+                "No. Unblur image is free and stays on this device. There is no signup."
+                if is_free()
+                else "No. The free tries and the paid pack stay on this device. There is no signup."
+            ),
         },
         {
             "q": "What if the file fails?",
             "a": (
-                "If a paid upscale errors or does not appear within 24 hours, write to us with the order ID "
-                "and we refund the ₹20 in full."
+                "If the upscale errors, try again with a JPG, PNG, or WebP under 8 MB. The token is returned so you can run it again."
+                if is_free()
+                else (
+                    "If a paid upscale errors or does not appear within 24 hours, write to us with the order ID "
+                    "and we refund it in full."
+                )
             ),
         },
     ]
@@ -274,7 +284,7 @@ def home_seo(price: int, free: int, pack: int) -> dict:
 def policy_seo(slug: str, page: dict) -> dict:
     descriptions = {
         "contact": "Email, phone, and address for Unblur, the AI image upscaler.",
-        "terms": "What you buy from Unblur: image upscales, free tries, and a ₹20 pack.",
+        "terms": "How to use Unblur, the free AI image upscaler.",
         "privacy": "What Unblur stores about a photo, why, and how long the file stays.",
         "refunds": "When Unblur refunds an upscale pack, and how to ask.",
         "delivery": "Unblur delivers a digital image on this page. Nothing is shipped.",
@@ -317,7 +327,11 @@ def guide_seo(guide: dict) -> dict:
 
 def guides_index_seo(price: int, free: int) -> dict:
     title = "Guides: unblur image, upscale, and remove blur | Unblur"
-    description = f"How to unblur a photo and upscale it. {free} free tries, then ₹{price}."
+    description = (
+        "How to unblur a photo and upscale it free. No account."
+        if is_free()
+        else f"How to unblur a photo and upscale it. {free} free tries, then ₹{price}."
+    )
     return pack_meta(title, description, "/guides", "website", _graph(_org()))
 
 

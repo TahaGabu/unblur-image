@@ -1,6 +1,6 @@
 # Unblur
 
-Unblur image online. The page is an AI image upscaler: three tries are free, then ₹20 adds three more.
+Unblur image online. The page is a free AI image upscaler. No account and no watermark.
 
 ## Run
 
@@ -12,6 +12,6 @@ copy .env.example .env
 uvicorn app:app --reload
 ```
 
-Set `REPLICATE_API_TOKEN` before an upscale can run, and the Razorpay keys before ₹20 checkout works. Set `SITE_URL` to the public address before launch so the canonical URL and sitemap point at the live site.
+Set `REPLICATE_API_TOKEN` before an upscale can run. Keep `FREE_MODE=1` so the tool stays free. Set `SITE_URL` to the public address before launch so the canonical URL and sitemap point at the live site.
 
 PythonAnywhere can load `wsgi.py`. The callable is `application`.

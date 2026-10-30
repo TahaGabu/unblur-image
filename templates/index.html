@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   {% include "_head.html" %}
-  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 </head>
 <body>
   {% include "_atmosphere.html" %}
@@ -151,7 +150,7 @@
       {% for item in faqs %}
       <details data-reveal style="--d:{{ loop.index0 * 0.04 }}s">
         <summary>{{ item.q }}</summary>
-        <p>{{ item.a }}{% if item.q == "What if the file fails?" %} See the <a href="/refunds">refund policy</a>.{% endif %}</p>
+        <p>{{ item.a }}</p>
       </details>
       {% endfor %}
     </section>
@@ -159,6 +158,6 @@
 
   {% include "_footer.html" %}
   <script id="cfg" type="application/json">{{ config_json | safe }}</script>
-  <script src="/static/js/app.js?v=4"></script>
+  <script src="/static/js/app.js?v=5"></script>
 </body>
 </html>

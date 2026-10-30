@@ -178,6 +178,8 @@ def _visitor_row(data: dict, visitor_id: str) -> dict:
 
 
 def tokens_left(visitor_id: str) -> int:
+    if is_free():
+        return 9999
     row = _visitor_row(load_tokens(), visitor_id)
     return max(0, free_tokens() - row["free_used"]) + row["paid"]
 
@@ -189,10 +191,12 @@ def _ip_cap() -> int:
 
 def spend_token(visitor_id: str, ip: str) -> tuple[str, str]:
     """Spend one token. Returns (bucket, error). bucket is free or paid."""
+    if is_free():
+        return "free", ""
     with lock:
         data = load_tokens()
         row = _visitor_row(data, visitor_id)
-        if is_free() or row["free_used"] < free_tokens():
+        if row["free_used"] < free_tokens():
             today = datetime.now().date().isoformat()
             ip_row = data["ips"].get(ip) or {}
             if int(ip_row.get(today) or 0) >= _ip_cap():
