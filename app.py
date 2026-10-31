@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from policies import pages
-from seo import faqs, guide_map, guides, guides_index_seo, guide_seo, home_seo, policy_seo, robots, sitemap
+from seo import load_reviews, faqs, guide_map, guides, guides_index_seo, guide_seo, home_seo, policy_seo, robots, sitemap
 from upscaler import upscale
 
 ROOT = Path(__file__).resolve().parent
@@ -114,6 +114,7 @@ def page_context() -> dict:
         "key_id": key_id,
         "render_ready": render_ready(),
         "faqs": faqs(price, free, pack),
+        "reviews": load_reviews(),
         "guides": guides(price, free, pack),
         "seo": home_seo(price, free, pack),
         "config_json": json.dumps(

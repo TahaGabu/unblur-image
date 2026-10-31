@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 SITE = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
 
@@ -196,6 +197,61 @@ def _org() -> dict:
     return node
 
 
+REVIEWS_FILE = Path(__file__).resolve().parent / "reviews.json"
+
+
+def load_reviews() -> list[dict]:
+    """Real customer reviews only. Each one is also shown on the home page."""
+    try:
+        data = json.loads(REVIEWS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    out = []
+    for r in data if isinstance(data, list) else []:
+        try:
+            rating = float(r["rating"])
+            name = str(r["author"]).strip()
+            body = str(r["body"]).strip()
+        except (KeyError, TypeError, ValueError):
+            continue
+        if name and body and 1 <= rating <= 5:
+            out.append({"author": name, "body": body, "rating": rating, "date": str(r.get("date", "")).strip()})
+    return out
+
+
+def _review_markup() -> dict:
+    """aggregateRating/review for the Product, built from reviews.json.
+
+    Returns nothing when there are no real reviews: Google only allows
+    ratings that are genuine and visible on the page.
+    """
+    reviews = load_reviews()
+    if not reviews:
+        return {}
+    avg = round(sum(r["rating"] for r in reviews) / len(reviews), 1)
+    nodes = []
+    for r in reviews:
+        node = {
+            "@type": "Review",
+            "reviewRating": {"@type": "Rating", "ratingValue": r["rating"], "bestRating": 5, "worstRating": 1},
+            "author": {"@type": "Person", "name": r["author"]},
+            "reviewBody": r["body"],
+        }
+        if r["date"]:
+            node["datePublished"] = r["date"]
+        nodes.append(node)
+    return {
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": avg,
+            "reviewCount": len(reviews),
+            "bestRating": 5,
+            "worstRating": 1,
+        },
+        "review": nodes,
+    }
+
+
 def _offer(price: int) -> dict:
     return {
         "@type": "Offer",
@@ -257,40 +313,8 @@ def home_seo(price: int, free: int, pack: int) -> dict:
         "brand": {"@type": "Brand", "name": "Unblur"},
         "image": url("/static/favicon.svg"),
         "offers": offer,
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "reviewCount": "124",
-            "bestRating": "5",
-            "worstRating": "1",
-        },
-        "review": [
-            {
-                "@type": "Review",
-                "reviewRating": {
-                    "@type": "Rating",
-                    "ratingValue": "5",
-                    "bestRating": "5",
-                    "worstRating": "1",
-                },
-                "author": {"@type": "Person", "name": "Priya S."},
-                "reviewBody": "Really impressed — uploaded a blurry old family photo and it came back sharp. No signup needed and completely free.",
-                "datePublished": "2026-10-25",
-            },
-            {
-                "@type": "Review",
-                "reviewRating": {
-                    "@type": "Rating",
-                    "ratingValue": "5",
-                    "bestRating": "5",
-                    "worstRating": "1",
-                },
-                "author": {"@type": "Person", "name": "Rahul M."},
-                "reviewBody": "Used it for a product listing photo. The 4× upscale made the image crisp enough for the marketplace. Great tool.",
-                "datePublished": "2026-10-26",
-            },
-        ],
     }
+    product.update(_review_markup())
     app_node = {
         "@type": "WebApplication",
         "name": "Unblur Image",

@@ -154,6 +154,22 @@
       </details>
       {% endfor %}
     </section>
+    {% if reviews %}
+    <section class="faq reviews" id="reviews">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Reviews</p>
+        <h2>What people say</h2>
+      </div>
+      {% for r in reviews %}
+      {% set stars = r.rating | round | int %}
+      <blockquote data-reveal style="--d:{{ loop.index0 * 0.04 }}s">
+        <p aria-label="{{ r.rating }} out of 5">{{ "★" * stars }}{{ "☆" * (5 - stars) }}</p>
+        <p>{{ r.body }}</p>
+        <footer>&mdash; {{ r.author }}{% if r.date %}, {{ r.date }}{% endif %}</footer>
+      </blockquote>
+      {% endfor %}
+    </section>
+    {% endif %}
   </main>
 
   {% include "_footer.html" %}
