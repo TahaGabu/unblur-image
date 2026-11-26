@@ -9,8 +9,9 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from xml.sax.saxutils import escape
 
-SITE = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+UPDATED = "2026-11-26"
 
 
 def is_free() -> bool:
@@ -20,10 +21,15 @@ def is_free() -> bool:
 PUBLISHED = "2026-10-22"
 
 
+def site() -> str:
+    return os.environ.get("SITE_URL", "http://127.0.0.1:8000").strip().rstrip("/") or "http://127.0.0.1:8000"
+
+
 def url(path: str = "/") -> str:
     if not path.startswith("/"):
         path = "/" + path
-    return SITE if path == "/" else SITE + path
+    base = site()
+    return base if path == "/" else base + path
 
 
 def output_scale() -> int:
@@ -403,16 +409,22 @@ def pack_meta(title: str, description: str, path: str, kind: str, schema: str) -
 
 
 def sitemap(price: int, free: int, pack: int) -> str:
-    paths = ["/", "/guides", "/contact", "/terms", "/privacy", "/refunds", "/delivery"]
-    paths += [f"/guides/{item['slug']}" for item in guides(price, free, pack)]
+    entries = [
+        ("/", "weekly", "1.0"),
+        ("/guides", "weekly", "0.8"),
+    ]
+    entries += [(f"/guides/{item['slug']}", "weekly", "0.7") for item in guides(price, free, pack)]
+    entries += [(path, "monthly", "0.3") for path in ("/contact", "/terms", "/privacy", "/refunds", "/delivery")]
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
-    for path in paths:
+    for path, freq, priority in entries:
         lines.append("  <url>")
-        lines.append(f"    <loc>{url(path)}</loc>")
-        lines.append("    <changefreq>weekly</changefreq>")
+        lines.append(f"    <loc>{escape(url(path))}</loc>")
+        lines.append(f"    <lastmod>{UPDATED}</lastmod>")
+        lines.append(f"    <changefreq>{freq}</changefreq>")
+        lines.append(f"    <priority>{priority}</priority>")
         lines.append("  </url>")
     lines.append("</urlset>")
     return "\n".join(lines) + "\n"

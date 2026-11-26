@@ -14,13 +14,13 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT / ".env")
+
 from analytics import ga_from_request, measurement_id, safe_error, track
 from policies import pages
 from seo import load_reviews, faqs, guide_map, guides, guides_index_seo, guide_seo, home_seo, policy_seo, robots, sitemap
 from upscaler import upscale
-
-ROOT = Path(__file__).resolve().parent
-load_dotenv(ROOT / ".env")
 
 DATA = ROOT / "data"
 INBOX = DATA / "inbox"
