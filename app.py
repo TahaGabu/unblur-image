@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from analytics import ga_from_request, measurement_id, safe_error, track
 from policies import pages
 from seo import load_reviews, faqs, guide_map, guides, guides_index_seo, guide_seo, home_seo, policy_seo, robots, sitemap
 from upscaler import upscale
@@ -83,6 +84,17 @@ def scale_factor() -> int:
     return 2 if _int_env("SCALE_FACTOR", 2) not in (2, 4) else _int_env("SCALE_FACTOR", 2)
 
 
+def _bind_templates() -> None:
+    templates.env.globals["ga_id"] = measurement_id()
+    templates.env.globals["site_free"] = is_free
+    templates.env.globals["site_price"] = price_rupees
+    templates.env.globals["site_pack"] = pack_tokens
+    templates.env.globals["site_scale"] = scale_factor
+
+
+_bind_templates()
+
+
 def razorpay_keys() -> tuple[str, str]:
     return (
         os.environ.get("RAZORPAY_KEY_ID", "").strip(),
@@ -117,6 +129,7 @@ def page_context() -> dict:
         "reviews": load_reviews(),
         "guides": guides(price, free, pack),
         "seo": home_seo(price, free, pack),
+        "page_type": "home",
         "config_json": json.dumps(
             {
                 "price": price,
@@ -259,6 +272,66 @@ def update_order(order_id: str, **fields) -> dict:
         return row
 
 
+def pack_item(price: int | None = None) -> dict:
+    value = price_rupees() if price is None else price
+    return {
+        "item_id": "upscale_pack",
+        "item_name": f"{pack_tokens()} image upscales",
+        "quantity": 1,
+        "price": value,
+    }
+
+
+def _hit(row: dict | None) -> dict:
+    row = row or {}
+    return {
+        "client_id": row.get("ga_client_id") or row.get("visitor_id") or "",
+        "session_id": row.get("ga_session_id") or "",
+        "page_location": row.get("page_location") or "",
+        "user_id": row.get("visitor_id") or "",
+    }
+
+
+def _elapsed(row: dict) -> int:
+    started = row.get("started_at") or ""
+    try:
+        delta = datetime.now() - datetime.fromisoformat(started)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, int(delta.total_seconds()))
+
+
+def save_checkout(order_id: str, receipt: str, visitor_id: str, ip: str, job_id: str, amount: int, ga: dict) -> None:
+    update_order(
+        order_id,
+        id=order_id,
+        kind="payment",
+        receipt=receipt,
+        job_id=job_id,
+        visitor_id=visitor_id,
+        ip=ip,
+        amount=amount,
+        currency="INR",
+        status="created",
+        message="Waiting for payment.",
+        created_at=datetime.now().isoformat(timespec="seconds"),
+        ga_client_id=ga.get("client_id", ""),
+        ga_session_id=ga.get("session_id", ""),
+        page_location=ga.get("page_location", ""),
+    )
+    price = amount // 100
+    track(
+        "begin_checkout",
+        {**ga, "user_id": visitor_id},
+        {
+            "currency": "INR",
+            "value": price,
+            "transaction_id": order_id,
+            "items": [pack_item(price)],
+        },
+    )
+
+
 def public_job(row: dict) -> dict:
     return {
         "id": row.get("id"),
@@ -301,9 +374,26 @@ def run_upscale(job_id: str) -> None:
             original_url=original,
             finished_at=datetime.now().isoformat(timespec="seconds"),
         )
+        fresh = load_orders().get(job_id) or row
+        track(
+            "upscale_completed",
+            _hit(fresh),
+            {
+                "bucket": row.get("bucket") or "",
+                "scale": scale_factor(),
+                "file_ext": fresh.get("file_ext") or "",
+                "elapsed_sec": _elapsed(row),
+            },
+        )
     except Exception as exc:
         refund_token(row.get("visitor_id") or "", row.get("ip") or "", row.get("bucket") or "")
         update_order(job_id, status="error", message=str(exc))
+        track(
+            "upscale_failed",
+            _hit(row),
+            {"bucket": row.get("bucket") or "", "error": safe_error(exc)},
+        )
+        track("token_refunded", _hit(row), {"bucket": row.get("bucket") or ""})
 
 
 def start_paid_or_free(job_id: str, visitor_id: str, ip: str) -> tuple[dict, str]:
@@ -323,21 +413,46 @@ def start_paid_or_free(job_id: str, visitor_id: str, ip: str) -> tuple[dict, str
         started_at=datetime.now().isoformat(timespec="seconds"),
     )
     threading.Thread(target=run_upscale, args=(job_id,), daemon=True).start()
-    payload = public_job(load_orders()[job_id])
+    row = load_orders().get(job_id) or {}
+    hit = _hit(row)
+    track(
+        "upscale_started",
+        hit,
+        {
+            "bucket": bucket,
+            "scale": scale_factor(),
+            "file_ext": row.get("file_ext") or "",
+            "file_kb": int((row.get("file_bytes") or 0) / 1024),
+        },
+    )
+    track(
+        "spend_virtual_currency",
+        hit,
+        {"virtual_currency_name": "upscale", "value": 1, "bucket": bucket},
+    )
+    payload = public_job(row)
     payload["tokens_left"] = tokens_left(visitor_id)
     return payload, ""
 
 
-def store_upload(visitor_id: str, ip: str, filename: str, data: bytes) -> tuple[dict, str, int]:
+def store_upload(visitor_id: str, ip: str, filename: str, data: bytes, ga: dict | None = None) -> tuple[dict, str, int]:
+    ga = dict(ga or {})
+    ga.setdefault("user_id", visitor_id)
+    ga.setdefault("client_id", visitor_id)
+
+    def reject(code: str, message: str, status: int) -> tuple[dict, str, int]:
+        track("upload_rejected", ga, {"reason": code})
+        return {}, message, status
+
     if len(data) < 32:
-        return {}, "Choose a photo first.", 400
+        return reject("empty", "Choose a photo first.", 400)
     if len(data) > MAX_BYTES:
-        return {}, "That photo is over 8 MB. Export a smaller JPG and try again.", 400
+        return reject("too_large", "That photo is over 8 MB. Export a smaller JPG and try again.", 400)
     kind = sniff_image(data)
     if not kind:
-        return {}, "Use a JPG, PNG, or WebP photo.", 400
+        return reject("bad_type", "Use a JPG, PNG, or WebP photo.", 400)
     if not render_ready():
-        return {}, "Upscales are paused right now.", 503
+        return reject("paused", "Upscales are paused right now.", 503)
     job_id = "img_" + uuid.uuid4().hex[:12]
     source = INBOX / f"{job_id}.{kind}"
     source.write_bytes(data)
@@ -353,9 +468,25 @@ def store_upload(visitor_id: str, ip: str, filename: str, data: bytes) -> tuple[
         message="Photo received.",
         created_at=datetime.now().isoformat(timespec="seconds"),
         image_url=None,
+        ga_client_id=ga.get("client_id", ""),
+        ga_session_id=ga.get("session_id", ""),
+        page_location=ga.get("page_location", ""),
+        file_ext=kind,
+        file_bytes=len(data),
     )
     payload, reason = start_paid_or_free(job_id, visitor_id, ip)
     status = 402 if payload.get("need_payment") else 200
+    if reason and is_free():
+        track("upload_limited", ga, {"reason": "ip_cap"})
+    elif payload.get("need_payment"):
+        price = price_rupees()
+        track(
+            "add_to_cart",
+            ga,
+            {"currency": "INR", "value": price, "items": [pack_item(price)]},
+        )
+    elif reason:
+        track("upload_limited", ga, {"reason": "unavailable"})
     if reason and not payload.get("need_payment"):
         return payload, reason, 429
     return payload, "", status
@@ -381,6 +512,25 @@ def credit_payment(order_id: str, payment_id: str) -> dict:
         job_id = row.get("job_id") or ""
         visitor_id = row.get("visitor_id") or ""
         ip = row.get("ip") or ""
+    if not already:
+        paid = load_orders().get(order_id) or {}
+        price = int(paid.get("amount") or 0) // 100
+        hit = _hit(paid)
+        track(
+            "purchase",
+            hit,
+            {
+                "transaction_id": payment_id,
+                "currency": "INR",
+                "value": price,
+                "items": [pack_item(price)],
+            },
+        )
+        track(
+            "earn_virtual_currency",
+            hit,
+            {"virtual_currency_name": "upscale", "value": pack_tokens()},
+        )
     if not already and job_id:
         job = load_orders().get(job_id) or {}
         if job.get("status") == "awaiting_payment":
@@ -447,7 +597,12 @@ async def guide_index(request: Request):
     price, free, pack = price_rupees(), free_tokens(), pack_tokens()
     return templates.TemplateResponse(
         "guides.html",
-        {"request": request, "guides": guides(price, free, pack), "seo": guides_index_seo(price, free)},
+        {
+            "request": request,
+            "guides": guides(price, free, pack),
+            "seo": guides_index_seo(price, free),
+            "page_type": "guides",
+        },
     )
 
 
@@ -458,7 +613,13 @@ async def guide_page(request: Request, slug: str):
         raise HTTPException(404, "Not found.")
     return templates.TemplateResponse(
         "guide.html",
-        {"request": request, "guide": guide, "seo": guide_seo(guide)},
+        {
+            "request": request,
+            "guide": guide,
+            "seo": guide_seo(guide),
+            "page_type": "guide",
+            "page_id": slug,
+        },
     )
 
 
@@ -476,7 +637,13 @@ async def token_status(request: Request):
 async def create_upscale(request: Request, image: UploadFile = File(...)):
     visitor_id, fresh = _visitor(request)
     data = await image.read()
-    payload, reason, status = store_upload(visitor_id, _request_ip(request), image.filename or "photo", data)
+    payload, reason, status = store_upload(
+        visitor_id,
+        _request_ip(request),
+        image.filename or "photo",
+        data,
+        ga_from_request(request, visitor_id),
+    )
     if reason and status != 402:
         payload = {"detail": reason, "tokens_left": tokens_left(visitor_id)}
     return _with_cookie(payload, visitor_id, fresh, status)
@@ -508,19 +675,14 @@ async def create_order(request: Request):
             "notes": {"product": f"{pack_tokens()} image upscales"},
         }
     )
-    update_order(
+    save_checkout(
         order["id"],
-        id=order["id"],
-        kind="payment",
-        receipt=receipt,
-        job_id=job_id,
-        visitor_id=visitor_id,
-        ip=_request_ip(request),
-        amount=amount,
-        currency="INR",
-        status="created",
-        message="Waiting for payment.",
-        created_at=datetime.now().isoformat(timespec="seconds"),
+        receipt,
+        visitor_id,
+        _request_ip(request),
+        job_id,
+        amount,
+        ga_from_request(request, visitor_id),
     )
     return _with_cookie(
         {"id": order["id"], "amount": amount, "currency": "INR", "key_id": razorpay_keys()[0]},
@@ -548,6 +710,11 @@ async def verify_payment(request: Request):
                 }
             )
         except Exception as exc:
+            track(
+                "payment_failed",
+                ga_from_request(request, row.get("visitor_id") or ""),
+                {"reason": "verify_failed"},
+            )
             raise HTTPException(400, "Payment could not be verified.") from exc
         credit_payment(order_id, payment_id)
     job_id = (load_orders().get(order_id) or {}).get("job_id") or ""
@@ -573,6 +740,12 @@ async def policy_page(request: Request, slug: str):
         raise HTTPException(404, "Not found.")
     return templates.TemplateResponse(
         "policy.html",
-        {"request": request, "page": page, "seo": policy_seo(slug, page)},
+        {
+            "request": request,
+            "page": page,
+            "seo": policy_seo(slug, page),
+            "page_type": "policy",
+            "page_id": slug,
+        },
     )
 

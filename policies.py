@@ -111,6 +111,12 @@ def pages(price: int, pack: int) -> dict[str, dict]:
                     ],
                 ),
                 (
+                    "Analytics",
+                    [
+                        "We use Google Analytics to see which pages are used, whether an upscale finishes, and whether a payment goes through. Google may set a cookie and receive your IP address, browser, and the pages you visit. We do not send Google your photo, card, UPI, or bank details.",
+                    ],
+                ),
+                (
                     "Your choices",
                     [f"To ask what we hold about an order or to have it deleted, write to {reach} with the order ID."],
                 ),

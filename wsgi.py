@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 import sys
 import uuid
-from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from analytics import ga_from_environ, track
 from app import (
     MAX_BYTES,
     OUT,
@@ -27,10 +27,10 @@ from app import (
     price_rupees,
     public_job,
     razorpay_keys,
+    save_checkout,
     store_upload,
     templates,
     tokens_left,
-    update_order,
 )
 from policies import pages
 from seo import guide_map, guides, guides_index_seo, guide_seo, policy_seo, robots, sitemap
@@ -152,13 +152,18 @@ def application(environ, start_response):
         return _html(
             start_response,
             "guides.html",
-            {"guides": guides(price, free, pack), "seo": guides_index_seo(price, free)},
+            {"guides": guides(price, free, pack), "seo": guides_index_seo(price, free), "page_type": "guides"},
         )
     if method == "GET" and path.startswith("/guides/"):
         guide = guide_map(price_rupees(), free_tokens(), pack_tokens()).get(path[len("/guides/"):])
         if not guide:
             return _json(start_response, {"detail": "Not found."}, "404 Not Found")
-        return _html(start_response, "guide.html", {"guide": guide, "seo": guide_seo(guide)})
+        slug = path[len("/guides/"):]
+        return _html(
+            start_response,
+            "guide.html",
+            {"guide": guide, "seo": guide_seo(guide), "page_type": "guide", "page_id": slug},
+        )
 
     if method == "GET" and path == "/api/tokens":
         visitor_id, fresh = _visitor(environ)
@@ -175,8 +180,15 @@ def application(environ, start_response):
         try:
             filename, data = _upload(environ)
         except ValueError as exc:
+            track("upload_rejected", ga_from_environ(environ, visitor_id), {"reason": "too_large"})
             return _json(start_response, {"detail": str(exc)}, "400 Bad Request", extra)
-        payload, reason, status = store_upload(visitor_id, _ip(environ), filename, data)
+        payload, reason, status = store_upload(
+            visitor_id,
+            _ip(environ),
+            filename,
+            data,
+            ga_from_environ(environ, visitor_id),
+        )
         http = "200 OK"
         if status == 402:
             http = "402 Payment Required"
@@ -213,19 +225,14 @@ def application(environ, start_response):
                     "notes": {"product": f"{pack_tokens()} image upscales"},
                 }
             )
-            update_order(
+            save_checkout(
                 order["id"],
-                id=order["id"],
-                kind="payment",
-                receipt=receipt,
-                job_id=str(body.get("job_id") or ""),
-                visitor_id=visitor_id,
-                ip=_ip(environ),
-                amount=amount,
-                currency="INR",
-                status="created",
-                message="Waiting for payment.",
-                created_at=datetime.now().isoformat(timespec="seconds"),
+                receipt,
+                visitor_id,
+                _ip(environ),
+                str(body.get("job_id") or ""),
+                amount,
+                ga_from_environ(environ, visitor_id),
             )
             return _json(
                 start_response,
@@ -259,6 +266,7 @@ def application(environ, start_response):
             payload["payment_id"] = order_id
             return _json(start_response, payload)
         except Exception:
+            track("payment_failed", ga_from_environ(environ), {"reason": "verify_failed"})
             return _json(start_response, {"detail": "Payment could not be verified."}, "400 Bad Request")
 
     if method == "GET" and path.startswith("/") and path.count("/") == 1:
@@ -266,5 +274,9 @@ def application(environ, start_response):
         if slug in POLICY_SLUGS:
             page = pages(price_rupees(), pack_tokens()).get(slug)
             if page:
-                return _html(start_response, "policy.html", {"page": page, "seo": policy_seo(slug, page)})
+                return _html(
+                    start_response,
+                    "policy.html",
+                    {"page": page, "seo": policy_seo(slug, page), "page_type": "policy", "page_id": slug},
+                )
     return _json(start_response, {"detail": "Not found."}, "404 Not Found")

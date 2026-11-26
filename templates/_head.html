@@ -17,6 +17,36 @@
 <meta name="twitter:description" content="{{ seo.description }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{% if ga_id %}
+<link rel="preconnect" href="https://www.googletagmanager.com">
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_id }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  window.UB = {
+    ga: {{ ga_id | tojson }},
+    page: {{ page_type | default("page") | tojson }},
+    pageId: {{ page_id | default("") | tojson }},
+    freeMode: {{ site_free() | tojson }},
+    price: {{ site_price() }},
+    pack: {{ site_pack() }},
+    scale: {{ site_scale() }}
+  };
+  gtag("js", new Date());
+  gtag("set", "user_properties", { free_mode: window.UB.freeMode ? "yes" : "no" });
+  var gaConfig = {
+    send_page_view: true,
+    transport_type: "beacon",
+    allow_google_signals: true,
+    allow_ad_personalization_signals: true,
+    page_type: window.UB.page,
+    page_id: window.UB.pageId,
+    content_group: window.UB.page
+  };
+  if (new URLSearchParams(location.search).has("ga_debug")) gaConfig.debug_mode = true;
+  gtag("config", window.UB.ga, gaConfig);
+</script>
+{% endif %}
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,560&family=Outfit:wght@360;500;650&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/style.css?v=4">
 <script type="application/ld+json">{{ seo.schema | safe }}</script>

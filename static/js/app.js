@@ -26,6 +26,20 @@ let polling = false;
 let progressTimer = 0;
 let progressValue = 0;
 
+const hit = (name, params) => {
+  if (typeof window.ubTrack === "function") window.ubTrack(name, params || {});
+};
+
+const fileMeta = (file) => {
+  const name = file.name || "";
+  const ext = (name.includes(".") ? name.split(".").pop() : "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8);
+  return {
+    file_ext: ext || "unknown",
+    file_kb: Math.max(0, Math.round((file.size || 0) / 1024)),
+    file_type: (file.type || "unknown").slice(0, 40),
+  };
+};
+
 const note = (text, warn = false) => {
   if (!say) return;
   say.hidden = !text;
@@ -115,7 +129,7 @@ async function refreshTokens() {
   paintTokens();
 }
 
-function showOriginal(file) {
+function showOriginal(file, method = "input") {
   if (localUrl) URL.revokeObjectURL(localUrl);
   localUrl = URL.createObjectURL(file);
   before.src = localUrl;
@@ -143,6 +157,7 @@ function showOriginal(file) {
   compare.classList.remove("working", "done");
   ready.hidden = true;
   dropLabel.textContent = file.name;
+  hit("file_select", Object.assign({ method }, fileMeta(file)));
 }
 
 async function poll(id) {
@@ -170,6 +185,7 @@ async function poll(id) {
       polling = false;
       go.disabled = false;
       paintTokens();
+      hit("result_shown", { tokens_left: tokensLeft });
       return;
     }
     if (job.status === "error") {
@@ -185,6 +201,7 @@ async function poll(id) {
       polling = false;
       go.disabled = false;
       paintTokens();
+      hit("result_failed", { reason: "job_error" });
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -193,15 +210,18 @@ async function poll(id) {
   note("This is taking longer than usual. Keep the page open and check again.", true);
   polling = false;
   go.disabled = false;
+  hit("result_timeout", { reason: "poll_timeout" });
 }
 
 async function pay(jobId) {
   if (!cfg.paymentsReady) {
     note("Payments are not switched on yet.", true);
+    hit("form_error", { form_id: "upscale", reason: "payments_off" });
     return;
   }
   if (typeof window.Razorpay !== "function") {
     note("Checkout is still loading. Try again in a moment.", true);
+    hit("form_error", { form_id: "upscale", reason: "checkout_loading" });
     return;
   }
   note("Opening secure checkout…");
@@ -226,23 +246,32 @@ async function pay(jobId) {
           body: JSON.stringify(response),
         });
         paintTokens();
+        hit("checkout_completed", { currency: "INR", value: cfg.price || 0 });
         if (job.id) poll(job.id);
         else note(job.message || "Upscales added.");
       } catch (err) {
         note(err.message, true);
+        hit("payment_failed", { reason: "verify_failed", via: "browser" });
       }
     },
-    modal: { ondismiss: () => note("Checkout closed. You have not been charged.") },
+    modal: {
+      ondismiss: () => {
+        note("Checkout closed. You have not been charged.");
+        hit("checkout_abandoned", { currency: "INR", value: cfg.price || 0 });
+      },
+    },
   });
   checkout.on("payment.failed", (resp) => {
     note(resp.error?.description || "Payment failed. You have not been charged.", true);
+    hit("payment_failed", { reason: "gateway", via: "browser" });
   });
+  hit("checkout_opened", { currency: "INR", value: order.amount ? order.amount / 100 : cfg.price || 0 });
   checkout.open();
 }
 
 fileInput?.addEventListener("change", () => {
   const file = fileInput.files?.[0];
-  if (file) showOriginal(file);
+  if (file) showOriginal(file, "input");
 });
 ["dragover", "dragleave", "drop"].forEach((name) => {
   drop?.addEventListener(name, (event) => {
@@ -250,7 +279,7 @@ fileInput?.addEventListener("change", () => {
     drop.classList.toggle("hot", name === "dragover");
     if (name === "drop" && event.dataTransfer?.files?.[0]) {
       fileInput.files = event.dataTransfer.files;
-      showOriginal(event.dataTransfer.files[0]);
+      showOriginal(event.dataTransfer.files[0], "drop");
     }
   });
 });
@@ -260,12 +289,16 @@ form?.addEventListener("submit", async (event) => {
   const file = fileInput?.files?.[0];
   if (!file) {
     note("Choose a photo first.", true);
+    hit("form_error", { form_id: "upscale", reason: "no_file" });
     return;
   }
   if (!cfg.renderReady) {
     note("Upscales are paused right now.", true);
+    hit("form_error", { form_id: "upscale", reason: "paused" });
     return;
   }
+  hit("form_submit", { form_id: "upscale", form_name: "unblur" });
+  hit("upscale_submit", { tokens_left: tokensLeft, free_mode: cfg.freeMode ? "yes" : "no", file_kb: fileMeta(file).file_kb });
   go.disabled = true;
   if (cfg.freeMode || tokensLeft > 0) startProgress();
   else note("Your free tries are used. Opening payment…");
@@ -281,10 +314,15 @@ form?.addEventListener("submit", async (event) => {
       if (progress) progress.hidden = true;
       if (waitCopy) waitCopy.hidden = false;
       go.disabled = false;
+      hit("payment_required", { tokens_left: tokensLeft });
       await pay(data.id);
       return;
     }
-    if (!response.ok) throw new Error(data.detail || "The photo could not be uploaded.");
+    if (!response.ok) {
+      const failure = new Error(data.detail || "The photo could not be uploaded.");
+      failure.analyticsReason = "upload_failed";
+      throw failure;
+    }
     if (data.id) await poll(data.id);
   } catch (err) {
     stopProgress();
@@ -292,6 +330,7 @@ form?.addEventListener("submit", async (event) => {
     if (wait) wait.classList.add("idle");
     if (waitCopy) waitCopy.hidden = false;
     note(err.message, true);
+    hit("form_error", { form_id: "upscale", reason: err.analyticsReason || "exception" });
     go.disabled = false;
   }
 });
