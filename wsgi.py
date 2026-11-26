@@ -33,7 +33,7 @@ from app import (
     tokens_left,
 )
 from policies import pages
-from seo import guide_map, guides, guides_index_seo, guide_seo, policy_seo, robots, sitemap
+from seo import bind_site, guide_map, guides, guides_index_seo, guide_seo, policy_seo, public_base, reset_site, robots, sitemap
 
 STATIC = ROOT / "static"
 POLICY_SLUGS = {"contact", "terms", "privacy", "refunds", "delivery"}
@@ -129,6 +129,16 @@ def _file(start_response, root: Path, relative: str):
 
 
 def application(environ, start_response):
+    host = environ.get("HTTP_X_FORWARDED_HOST") or environ.get("HTTP_HOST") or ""
+    proto = environ.get("HTTP_X_FORWARDED_PROTO") or environ.get("wsgi.url_scheme") or ""
+    token = bind_site(public_base(host, proto))
+    try:
+        return _application(environ, start_response)
+    finally:
+        reset_site(token)
+
+
+def _application(environ, start_response):
     method = environ.get("REQUEST_METHOD", "GET").upper()
     path = environ.get("PATH_INFO") or "/"
     if len(path) > 1 and path.endswith("/"):

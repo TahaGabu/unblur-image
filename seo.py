@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import json
 import os
+from contextvars import ContextVar
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 UPDATED = "2026-11-26"
+_LOCAL_HOSTS = {"", "127.0.0.1", "localhost", "0.0.0.0", "testclient"}
+_request_base: ContextVar[str] = ContextVar("unblur_site_base", default="")
 
 
 def is_free() -> bool:
@@ -21,8 +24,37 @@ def is_free() -> bool:
 PUBLISHED = "2026-10-22"
 
 
+def bind_site(base: str):
+    return _request_base.set((base or "").rstrip("/"))
+
+
+def reset_site(token) -> None:
+    _request_base.reset(token)
+
+
+def public_base(host: str, proto: str = "") -> str:
+    """Public origin for this request. Local hosts keep the configured SITE_URL."""
+    host = (host or "").split(",")[0].strip()
+    if host.endswith(":80") or host.endswith(":443"):
+        host = host.rsplit(":", 1)[0]
+    name = host.split(":")[0].lower()
+    if name in _LOCAL_HOSTS:
+        return ""
+    scheme = (proto or "").split(",")[0].strip().lower()
+    if name.endswith(".pythonanywhere.com") or scheme not in {"http", "https"}:
+        scheme = "https"
+    return f"{scheme}://{host}".rstrip("/")
+
+
 def site() -> str:
-    return os.environ.get("SITE_URL", "http://127.0.0.1:8000").strip().rstrip("/") or "http://127.0.0.1:8000"
+    requested = _request_base.get().rstrip("/")
+    if requested:
+        return requested
+    configured = os.environ.get("SITE_URL", "").strip().rstrip("/")
+    host = configured.split("://", 1)[-1].split("/", 1)[0].split(":")[0].lower() if configured else ""
+    if configured and host not in _LOCAL_HOSTS:
+        return configured
+    return configured or "http://127.0.0.1:8000"
 
 
 def url(path: str = "/") -> str:

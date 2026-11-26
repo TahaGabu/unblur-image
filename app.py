@@ -19,7 +19,21 @@ load_dotenv(ROOT / ".env")
 
 from analytics import ga_from_request, measurement_id, safe_error, track
 from policies import pages
-from seo import load_reviews, faqs, guide_map, guides, guides_index_seo, guide_seo, home_seo, policy_seo, robots, sitemap
+from seo import (
+    bind_site,
+    faqs,
+    guide_map,
+    guide_seo,
+    guides,
+    guides_index_seo,
+    home_seo,
+    load_reviews,
+    policy_seo,
+    public_base,
+    reset_site,
+    robots,
+    sitemap,
+)
 from upscaler import upscale
 
 DATA = ROOT / "data"
@@ -34,6 +48,17 @@ for folder in (DATA, INBOX, OUT):
 
 app = FastAPI(title="Unblur")
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+
+
+@app.middleware("http")
+async def _use_public_site(request: Request, call_next):
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    token = bind_site(public_base(host, proto))
+    try:
+        return await call_next(request)
+    finally:
+        reset_site(token)
 
 
 def _media_type(path: Path) -> str:
